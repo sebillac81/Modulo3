@@ -23,6 +23,7 @@ El objetivo de la aplicación es centralizar esta información para conocer en t
 * Indica la cantidad de café verde utilizada y la cantidad de café tostado obtenida.
 * Registra ventas de café tostado a clientes.
 
+
 ---
 
 ## Objetivos
