@@ -23,7 +23,6 @@ El objetivo de la aplicación es centralizar esta información para conocer en t
 * Indica la cantidad de café verde utilizada y la cantidad de café tostado obtenida.
 * Registra ventas de café tostado a clientes.
 
-
 ---
 
 ## Objetivos
@@ -53,19 +52,19 @@ El sistema deberá permitir registrar proveedores de insumos.
 
 ### RF-03 Registrar cafés verdes
 
-El sistema deberá permitir registrar cafés verdes, indicando entre sus datos el precio de compra por kilogramo.
+El sistema deberá permitir registrar cafés verdes, indicando entre sus datos el precio de compra por kilogramo, el cual deberá ser mayor a cero.
 
 ---
 
 ### RF-04 Registrar insumos
 
-El sistema deberá permitir registrar insumos, indicando su precio por unidad.
+El sistema deberá permitir registrar insumos, indicando su precio por unidad, el cual deberá ser mayor a cero.
 
 ---
 
 ### RF-05 Registrar presentaciones de venta
 
-El sistema deberá permitir registrar presentaciones de venta, indicando la cantidad de café tostado que representa cada unidad y los insumos asociados (por ejemplo, tipo de bolsa y, opcionalmente, etiqueta).
+El sistema deberá permitir registrar presentaciones de venta, indicando la cantidad de café tostado en gramos que representa cada unidad (mayor a cero) y cero o más insumos asociados (por ejemplo, tipo de bolsa y etiqueta).
 
 ---
 
@@ -77,13 +76,13 @@ El sistema deberá permitir registrar clientes.
 
 ### RF-07 Registrar batch de tueste
 
-El sistema deberá permitir registrar un batch indicando:
+El sistema deberá permitir registrar un batch, utilizando un único café verde, indicando:
 
 * Café verde utilizado.
-* Cantidad de café verde.
-* Cantidad de café tostado obtenida.
+* Cantidad de café verde utilizada (mayor a cero).
+* Cantidad de café tostado obtenida (mayor a cero).
 * Fecha del tueste.
-* Datos relevantes del proceso (por ejemplo humedad, densidad y porcentaje de desarrollo).
+* Datos del proceso (humedad, densidad y porcentaje de desarrollo), de carácter opcional.
 
 ---
 
@@ -113,7 +112,7 @@ El sistema deberá calcular automáticamente el porcentaje de merma del batch.
 
 ### RF-12 Calcular el costo del café tostado
 
-El sistema deberá calcular automáticamente el costo del café tostado considerando la merma.
+El sistema deberá calcular automáticamente el costo del café tostado obtenido en un batch, utilizando el precio de compra del café verde vigente al momento de registrar el batch. Ese precio queda fijo para el batch y no se recalcula ante cambios posteriores del precio en el catálogo.
 
 ---
 
@@ -129,8 +128,8 @@ El sistema deberá permitir registrar una venta indicando:
 
 * Cliente.
 * Presentación de venta.
-* Cantidad de unidades vendidas.
-* Precio de venta.
+* Cantidad de unidades vendidas (mayor a cero).
+* Precio de venta (mayor a cero).
 * Fecha de la venta.
 
 ---
@@ -149,7 +148,7 @@ El sistema deberá impedir registrar una venta cuando no exista stock suficiente
 
 ### RF-17 Calcular los costos asociados a una venta
 
-El sistema deberá calcular automáticamente los costos asociados a una venta, según los insumos definidos en la presentación utilizada (por ejemplo bolsas y etiquetas).
+El sistema deberá calcular automáticamente los costos asociados a una venta, según los insumos definidos en la presentación utilizada (por ejemplo bolsas y etiquetas), utilizando el precio unitario de cada insumo vigente al momento de registrar la venta. Ese precio queda fijo para la venta y no se recalcula ante cambios posteriores del precio en el catálogo.
 
 ---
 
@@ -199,6 +198,7 @@ El sistema deberá permitir consultar la rentabilidad de cada venta.
 
 * RNF-01: El tiempo de respuesta para las operaciones principales deberá ser inferior a 3 segundos en el percentil 95 (p95), bajo una carga de hasta 5 usuarios concurrentes.
 * RNF-02: El stock de café verde y de café tostado nunca deberá ser menor a 0 (cero).
+* RNF-03: Los cálculos monetarios (costo del café tostado, costo promedio ponderado, costos asociados) y porcentuales (merma, margen de ganancia) deberán expresarse con una precisión de 2 decimales.
 
 ---
 
@@ -230,9 +230,9 @@ El sistema deberá permitir consultar la rentabilidad de cada venta.
 
 ---
 
-### AC-03 (RF-03) Registrar café verde
+### AC-03a (RF-03) Registrar café verde
 
-**Dado** que el usuario ingresa los datos de un café verde, incluyendo su precio de compra por kilogramo,
+**Dado** que el usuario ingresa los datos de un café verde, incluyendo un precio de compra por kilogramo mayor a cero,
 
 **Cuando** el usuario guarda el registro,
 
@@ -240,9 +240,19 @@ El sistema deberá permitir consultar la rentabilidad de cada venta.
 
 ---
 
-### AC-04 (RF-04) Registrar insumo
+### AC-03b (RF-03) Rechazar café verde con precio de compra inválido
 
-**Dado** que el usuario ingresa los datos de un insumo, incluyendo su precio por unidad,
+**Dado** que el usuario ingresa un precio de compra por kilogramo menor o igual a cero,
+
+**Cuando** el usuario intenta guardar el registro,
+
+**Entonces** el sistema deberá rechazar la operación e informar que el precio de compra debe ser mayor a cero.
+
+---
+
+### AC-04a (RF-04) Registrar insumo
+
+**Dado** que el usuario ingresa los datos de un insumo, incluyendo un precio por unidad mayor a cero,
 
 **Cuando** el usuario guarda el registro,
 
@@ -250,13 +260,33 @@ El sistema deberá permitir consultar la rentabilidad de cada venta.
 
 ---
 
-### AC-05 (RF-05) Registrar presentación de venta
+### AC-04b (RF-04) Rechazar insumo con precio inválido
 
-**Dado** que el usuario ingresa los datos de una presentación de venta, incluyendo la cantidad de café tostado que representa y los insumos asociados,
+**Dado** que el usuario ingresa un precio por unidad menor o igual a cero,
+
+**Cuando** el usuario intenta guardar el registro,
+
+**Entonces** el sistema deberá rechazar la operación e informar que el precio por unidad debe ser mayor a cero.
+
+---
+
+### AC-05a (RF-05) Registrar presentación de venta
+
+**Dado** que el usuario ingresa los datos de una presentación de venta, incluyendo una cantidad de café tostado en gramos mayor a cero y cero o más insumos asociados,
 
 **Cuando** el usuario guarda el registro,
 
 **Entonces** el sistema deberá registrar la presentación de venta.
+
+---
+
+### AC-05b (RF-05) Rechazar presentación con cantidad inválida
+
+**Dado** que el usuario ingresa una cantidad de café tostado en gramos menor o igual a cero,
+
+**Cuando** el usuario intenta guardar el registro,
+
+**Entonces** el sistema deberá rechazar la operación e informar que la cantidad debe ser mayor a cero.
 
 ---
 
@@ -270,13 +300,23 @@ El sistema deberá permitir consultar la rentabilidad de cada venta.
 
 ---
 
-### AC-07 (RF-07) Registrar batch de tueste
+### AC-07a (RF-07) Registrar batch de tueste
 
-**Dado** que existe stock suficiente de un café verde,
+**Dado** que existe stock suficiente del único café verde seleccionado, y las cantidades de café verde y de café tostado ingresadas son mayores a cero,
 
-**Cuando** el tostador registra un nuevo batch indicando café verde, cantidades, fecha y datos del proceso,
+**Cuando** el tostador registra un nuevo batch indicando café verde, cantidades, fecha y, opcionalmente, datos del proceso,
 
 **Entonces** el sistema deberá guardar el batch con los datos ingresados.
+
+---
+
+### AC-07b (RF-07) Rechazar batch con cantidades inválidas
+
+**Dado** que la cantidad de café verde o la cantidad de café tostado ingresada es menor o igual a cero,
+
+**Cuando** el usuario intenta registrar el batch,
+
+**Entonces** el sistema deberá rechazar la operación e informar que las cantidades deben ser mayores a cero.
 
 ---
 
@@ -312,21 +352,21 @@ El sistema deberá permitir consultar la rentabilidad de cada venta.
 
 ### AC-11 (RF-11) Calcular el porcentaje de merma del batch
 
-**Dado** un batch con cantidad de café verde y cantidad de café tostado,
+**Dado** un batch con cantidad de café verde utilizada y cantidad de café tostado obtenida,
 
 **Cuando** el batch es registrado,
 
-**Entonces** el sistema deberá calcular automáticamente el porcentaje de merma.
+**Entonces** el sistema deberá calcular el porcentaje de merma como ((cantidad de café verde utilizada − cantidad de café tostado obtenida) / cantidad de café verde utilizada) × 100, con una precisión de 2 decimales.
 
 ---
 
 ### AC-12 (RF-12) Calcular el costo del café tostado
 
-**Dado** un batch con su cantidad de café verde utilizada, el precio de compra del café verde y la cantidad de café tostado obtenida,
+**Dado** un batch con su cantidad de café verde utilizada, el precio de compra del café verde vigente al momento del registro, y la cantidad de café tostado obtenida,
 
 **Cuando** el batch es registrado,
 
-**Entonces** el sistema deberá calcular el costo del café tostado como (precio de compra del café verde × cantidad de café verde utilizada) / cantidad de café tostado obtenida.
+**Entonces** el sistema deberá calcular el costo del café tostado como (precio de compra del café verde × cantidad de café verde utilizada) / cantidad de café tostado obtenida, con una precisión de 2 decimales, y almacenar ese precio de compra como parte del batch de forma permanente.
 
 ---
 
@@ -336,17 +376,27 @@ El sistema deberá permitir consultar la rentabilidad de cada venta.
 
 **Cuando** el batch es registrado,
 
-**Entonces** el sistema deberá recalcular el costo promedio ponderado como ((stock existente × costo promedio actual) + (cantidad del nuevo batch × costo del nuevo batch)) / (stock existente + cantidad del nuevo batch).
+**Entonces** el sistema deberá recalcular el costo promedio ponderado como ((stock existente × costo promedio actual) + (cantidad del nuevo batch × costo del nuevo batch)) / (stock existente + cantidad del nuevo batch), con una precisión de 2 decimales.
 
 ---
 
-### AC-14 (RF-14) Registrar venta de café tostado
+### AC-14a (RF-14) Registrar venta de café tostado
 
-**Dado** que existe stock suficiente de café tostado,
+**Dado** que existe stock suficiente de café tostado, y la cantidad de unidades vendidas y el precio de venta ingresados son mayores a cero,
 
 **Cuando** el usuario registra una venta indicando cliente, presentación, cantidad de unidades, precio de venta y fecha,
 
 **Entonces** el sistema deberá guardar la venta con los datos ingresados.
+
+---
+
+### AC-14b (RF-14) Rechazar venta con cantidad o precio inválidos
+
+**Dado** que la cantidad de unidades vendidas o el precio de venta ingresado es menor o igual a cero,
+
+**Cuando** el usuario intenta registrar la venta,
+
+**Entonces** el sistema deberá rechazar la operación e informar que la cantidad y el precio deben ser mayores a cero.
 
 ---
 
@@ -372,11 +422,11 @@ El sistema deberá permitir consultar la rentabilidad de cada venta.
 
 ### AC-17 (RF-17) Calcular los costos asociados a una venta
 
-**Dado** una venta con su cantidad de unidades vendidas y la presentación utilizada, con sus insumos y precio unitario,
+**Dado** una venta con su cantidad de unidades vendidas y la presentación utilizada, con sus insumos y el precio unitario de cada insumo vigente al momento de registrar la venta,
 
 **Cuando** el usuario consulta la información de la venta,
 
-**Entonces** el sistema deberá calcular los costos asociados como la cantidad de unidades vendidas multiplicada por la suma de los precios unitarios de los insumos de la presentación.
+**Entonces** el sistema deberá calcular los costos asociados como la cantidad de unidades vendidas multiplicada por la suma de los precios unitarios de los insumos de la presentación, con una precisión de 2 decimales, utilizando los precios almacenados de forma permanente en el momento del registro de la venta.
 
 ---
 
@@ -386,7 +436,7 @@ El sistema deberá permitir consultar la rentabilidad de cada venta.
 
 **Cuando** el usuario consulta la información de la venta,
 
-**Entonces** el sistema deberá calcular el margen de ganancia como ((precio de venta × cantidad de unidades vendidas) − (costo promedio ponderado × cantidad de café tostado vendida + costos asociados)) / (precio de venta × cantidad de unidades vendidas) × 100.
+**Entonces** el sistema deberá calcular el margen de ganancia como ((precio de venta × cantidad de unidades vendidas) − (costo promedio ponderado × cantidad de café tostado vendida + costos asociados)) / (precio de venta × cantidad de unidades vendidas) × 100, con una precisión de 2 decimales.
 
 ---
 
@@ -461,6 +511,9 @@ Esta primera versión no contempla:
 * Soporte para múltiples sucursales o empresas (multitenancy).
 * Control de acceso por rol (restricción de datos/funciones entre Administrador y Tostador). Ambas personas operan sobre la misma información sin restricciones de visibilidad.
 * Inventario de café tostado por lote (FIFO). El costeo del stock de café tostado se maneja como pool único mediante costo promedio ponderado (RF-13).
+* Edición y eliminación de proveedores, cafés verdes, insumos, presentaciones y clientes. Esta versión solo contempla alta y consulta de estas entidades.
+* Autenticación y control de acceso (login). La aplicación es de uso interno y no requiere inicio de sesión.
+* Mezcla de cafés verdes (blends) en un mismo batch. Un batch de tueste utiliza un único café verde (RF-07).
 
 ---
 
