@@ -5,16 +5,16 @@ using RoastingManager.Api.Contracts.Catalogs;
 namespace RoastingManager.Api.Tests.Catalogs;
 
 // RF-01 / AC-01: registrar y consultar proveedores de café.
-public class CoffeeSuppliersTests : IClassFixture<CatalogsApiFactory>, IAsyncLifetime
+public class CoffeeSuppliersTests : IClassFixture<ApiFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
 
-    public CoffeeSuppliersTests(CatalogsApiFactory factory)
+    public CoffeeSuppliersTests(ApiFactory factory)
     {
         _client = factory.CreateClient();
     }
 
-    public Task InitializeAsync() => CatalogsApiFactory.ResetDatabaseAsync();
+    public Task InitializeAsync() => ApiFactory.ResetDatabaseAsync();
 
     public Task DisposeAsync() => Task.CompletedTask;
 

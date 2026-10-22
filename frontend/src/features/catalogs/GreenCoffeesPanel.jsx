@@ -23,11 +23,13 @@ export function GreenCoffeesPanel() {
           type: 'number',
           required: true,
         },
+        { name: 'stockKg', label: 'Stock inicial (kg)', type: 'number', required: true },
       ]}
       columns={[
         { key: 'name', label: 'Nombre' },
         { key: 'supplierName', label: 'Proveedor' },
         { key: 'purchasePricePerKg', label: 'Precio/kg' },
+        { key: 'stockKg', label: 'Stock (kg)' },
       ]}
     />
   )

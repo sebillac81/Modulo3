@@ -19,6 +19,8 @@ public class RoastingManagerDbContext : DbContext
     public DbSet<Supply> Supplies => Set<Supply>();
     public DbSet<SalePresentation> SalePresentations => Set<SalePresentation>();
     public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<RoastBatch> RoastBatches => Set<RoastBatch>();
+    public DbSet<RoastedCoffeeStock> RoastedCoffeeStock => Set<RoastedCoffeeStock>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -34,5 +36,10 @@ public class RoastingManagerDbContext : DbContext
                     j.ToTable("sale_presentation_supplies");
                     j.HasKey("presentation_id", "supply_id");
                 });
+
+        // Fila única (id = 1), sin columna identity en la DB.
+        modelBuilder.Entity<RoastedCoffeeStock>()
+            .Property(s => s.Id)
+            .ValueGeneratedNever();
     }
 }

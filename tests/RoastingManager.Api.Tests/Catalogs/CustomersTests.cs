@@ -5,16 +5,16 @@ using RoastingManager.Api.Contracts.Catalogs;
 namespace RoastingManager.Api.Tests.Catalogs;
 
 // RF-06 / AC-06: registrar y consultar clientes.
-public class CustomersTests : IClassFixture<CatalogsApiFactory>, IAsyncLifetime
+public class CustomersTests : IClassFixture<ApiFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
 
-    public CustomersTests(CatalogsApiFactory factory)
+    public CustomersTests(ApiFactory factory)
     {
         _client = factory.CreateClient();
     }
 
-    public Task InitializeAsync() => CatalogsApiFactory.ResetDatabaseAsync();
+    public Task InitializeAsync() => ApiFactory.ResetDatabaseAsync();
 
     public Task DisposeAsync() => Task.CompletedTask;
 

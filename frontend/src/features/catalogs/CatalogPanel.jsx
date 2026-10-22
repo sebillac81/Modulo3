@@ -19,8 +19,10 @@ function toPayloadValue(field, raw) {
 }
 
 // Panel genérico de catálogo: formulario de alta + listado. Reutilizado por
-// cada entidad de RF-01 a RF-06, que solo difieren en los campos y columnas.
-export function CatalogPanel({ title, api, fields, columns }) {
+// cada entidad de RF-01 a RF-06 y por los batches de tueste (RF-07), que
+// solo difieren en los campos y columnas. `onCreated` es opcional y permite
+// refrescar datos relacionados (p.ej. el stock de café tostado) tras un alta.
+export function CatalogPanel({ title, api, fields, columns, onCreated }) {
   const [items, setItems] = useState([])
   const [form, setForm] = useState(() => initialForm(fields))
   const [error, setError] = useState(null)
@@ -46,6 +48,7 @@ export function CatalogPanel({ title, api, fields, columns }) {
       await api.create(payload)
       setForm(initialForm(fields))
       await load()
+      await onCreated?.()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -89,7 +92,7 @@ export function CatalogPanel({ title, api, fields, columns }) {
                 ))}
               </select>
             )}
-            {(field.type === 'text' || field.type === 'number') && (
+            {(field.type === 'text' || field.type === 'number' || field.type === 'date') && (
               <input
                 type={field.type}
                 step={field.type === 'number' ? '0.01' : undefined}

@@ -5,16 +5,16 @@ using RoastingManager.Api.Contracts.Catalogs;
 namespace RoastingManager.Api.Tests.Catalogs;
 
 // RF-02 / AC-02: registrar y consultar proveedores de insumos.
-public class SupplySuppliersTests : IClassFixture<CatalogsApiFactory>, IAsyncLifetime
+public class SupplySuppliersTests : IClassFixture<ApiFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
 
-    public SupplySuppliersTests(CatalogsApiFactory factory)
+    public SupplySuppliersTests(ApiFactory factory)
     {
         _client = factory.CreateClient();
     }
 
-    public Task InitializeAsync() => CatalogsApiFactory.ResetDatabaseAsync();
+    public Task InitializeAsync() => ApiFactory.ResetDatabaseAsync();
 
     public Task DisposeAsync() => Task.CompletedTask;
 

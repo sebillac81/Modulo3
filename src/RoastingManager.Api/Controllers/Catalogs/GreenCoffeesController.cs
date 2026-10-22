@@ -24,7 +24,8 @@ public class GreenCoffeesController : ControllerBase
         var greenCoffees = await _dbContext.GreenCoffees
             .Include(c => c.Supplier)
             .OrderBy(c => c.Name)
-            .Select(c => new GreenCoffeeResponse(c.Id, c.Name, c.SupplierId, c.Supplier!.Name, c.PurchasePricePerKg))
+            .Select(c => new GreenCoffeeResponse(
+                c.Id, c.Name, c.SupplierId, c.Supplier!.Name, c.PurchasePricePerKg, c.StockKg))
             .ToListAsync();
 
         return Ok(greenCoffees);
@@ -45,12 +46,14 @@ public class GreenCoffeesController : ControllerBase
             Name = request.Name,
             SupplierId = request.SupplierId,
             PurchasePricePerKg = request.PurchasePricePerKg,
+            StockKg = request.StockKg,
         };
         _dbContext.GreenCoffees.Add(greenCoffee);
         await _dbContext.SaveChangesAsync();
 
         var response = new GreenCoffeeResponse(
-            greenCoffee.Id, greenCoffee.Name, greenCoffee.SupplierId, supplier.Name, greenCoffee.PurchasePricePerKg);
+            greenCoffee.Id, greenCoffee.Name, greenCoffee.SupplierId, supplier.Name,
+            greenCoffee.PurchasePricePerKg, greenCoffee.StockKg);
         return CreatedAtAction(nameof(GetAll), response);
     }
 }

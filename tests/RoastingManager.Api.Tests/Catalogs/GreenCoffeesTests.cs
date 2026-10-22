@@ -5,16 +5,16 @@ using RoastingManager.Api.Contracts.Catalogs;
 namespace RoastingManager.Api.Tests.Catalogs;
 
 // RF-03 / AC-03a / AC-03b: registrar y consultar cafés verdes.
-public class GreenCoffeesTests : IClassFixture<CatalogsApiFactory>, IAsyncLifetime
+public class GreenCoffeesTests : IClassFixture<ApiFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
 
-    public GreenCoffeesTests(CatalogsApiFactory factory)
+    public GreenCoffeesTests(ApiFactory factory)
     {
         _client = factory.CreateClient();
     }
 
-    public Task InitializeAsync() => CatalogsApiFactory.ResetDatabaseAsync();
+    public Task InitializeAsync() => ApiFactory.ResetDatabaseAsync();
 
     public Task DisposeAsync() => Task.CompletedTask;
 
@@ -33,13 +33,14 @@ public class GreenCoffeesTests : IClassFixture<CatalogsApiFactory>, IAsyncLifeti
 
         var response = await _client.PostAsJsonAsync(
             "/api/green-coffees",
-            new CreateGreenCoffeeRequest("Colombia Huila", supplierId, 5.50m));
+            new CreateGreenCoffeeRequest("Colombia Huila", supplierId, 5.50m, 10m));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var body = await response.Content.ReadFromJsonAsync<GreenCoffeeResponse>();
         Assert.Equal(5.50m, body!.PurchasePricePerKg);
         Assert.Equal("Finca La Esperanza", body.SupplierName);
+        Assert.Equal(10m, body.StockKg);
     }
 
     [Theory]
@@ -51,7 +52,7 @@ public class GreenCoffeesTests : IClassFixture<CatalogsApiFactory>, IAsyncLifeti
 
         var response = await _client.PostAsJsonAsync(
             "/api/green-coffees",
-            new CreateGreenCoffeeRequest("Colombia Huila", supplierId, invalidPrice));
+            new CreateGreenCoffeeRequest("Colombia Huila", supplierId, invalidPrice, 10m));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 

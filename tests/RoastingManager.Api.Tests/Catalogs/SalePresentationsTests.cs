@@ -5,16 +5,16 @@ using RoastingManager.Api.Contracts.Catalogs;
 namespace RoastingManager.Api.Tests.Catalogs;
 
 // RF-05 / AC-05a / AC-05b: registrar y consultar presentaciones de venta.
-public class SalePresentationsTests : IClassFixture<CatalogsApiFactory>, IAsyncLifetime
+public class SalePresentationsTests : IClassFixture<ApiFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
 
-    public SalePresentationsTests(CatalogsApiFactory factory)
+    public SalePresentationsTests(ApiFactory factory)
     {
         _client = factory.CreateClient();
     }
 
-    public Task InitializeAsync() => CatalogsApiFactory.ResetDatabaseAsync();
+    public Task InitializeAsync() => ApiFactory.ResetDatabaseAsync();
 
     public Task DisposeAsync() => Task.CompletedTask;
 

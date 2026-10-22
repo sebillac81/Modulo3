@@ -9,7 +9,7 @@ namespace RoastingManager.Api.Tests;
 // desarrollo/producción compartida entre módulos (ver docker-compose.yml).
 // El esquema se migra una sola vez vía DbUp antes de correr los tests
 // (ver README de tests); acá solo truncamos entre casos.
-public class CatalogsApiFactory : WebApplicationFactory<Program>
+public class ApiFactory : WebApplicationFactory<Program>
 {
     public const string TestConnectionString =
         "Host=localhost;Port=5432;Database=roasting_manager_test;Username=roasting_manager;Password=roasting_manager";
@@ -31,9 +31,10 @@ public class CatalogsApiFactory : WebApplicationFactory<Program>
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            TRUNCATE sale_presentation_supplies, sale_presentations, supplies,
-                     supply_suppliers, green_coffees, coffee_suppliers, customers
+            TRUNCATE roast_batches, sale_presentation_supplies, sale_presentations,
+                     supplies, supply_suppliers, green_coffees, coffee_suppliers, customers
             RESTART IDENTITY CASCADE;
+            UPDATE roasted_coffee_stock SET quantity_kg = 0, weighted_average_cost_per_kg = 0;
             """;
         await command.ExecuteNonQueryAsync();
     }

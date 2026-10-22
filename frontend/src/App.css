@@ -28,6 +28,42 @@ main {
   color: #666;
 }
 
+.section-nav {
+  display: flex;
+  gap: 0.5rem;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 1.5rem 1.5rem;
+  border-bottom: 2px solid #3b2412;
+}
+
+.section-nav button {
+  padding: 0.6rem 1.2rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #666;
+}
+
+.section-nav button.active {
+  color: #3b2412;
+  font-weight: 600;
+  border-bottom: 3px solid #3b2412;
+}
+
+.stock-summary {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #efe6da;
+  border-radius: 8px;
+}
+
+.stock-summary h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
 .catalog-tabs {
   display: flex;
   flex-wrap: wrap;
