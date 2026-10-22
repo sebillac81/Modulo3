@@ -1,0 +1,26 @@
+# Postgres se comparte entre los módulos de RoastingManager: si el contenedor
+# `roasting-manager-postgres` ya está corriendo (levantado por otro módulo),
+# este compose no hace falta correrlo — Modulo3 se conecta a esa misma instancia.
+# Si no está corriendo, `docker compose up -d` la levanta con las mismas
+# credenciales/nombre para que el resto de los módulos la sigan encontrando.
+services:
+  db:
+    image: postgres:16
+    container_name: roasting-manager-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: roasting_manager
+      POSTGRES_PASSWORD: roasting_manager
+      POSTGRES_DB: roasting_manager
+    ports:
+      - "5432:5432"
+    volumes:
+      - roasting_manager_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U roasting_manager -d roasting_manager"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  roasting_manager_pgdata:
