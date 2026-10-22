@@ -35,4 +35,21 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: 'Batches de tueste' })).toBeInTheDocument()
   })
+
+  it('navigates to the sales section', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve([]),
+      }),
+    )
+
+    render(<App />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Ventas' }))
+
+    expect(await screen.findByRole('heading', { name: 'Ventas' })).toBeInTheDocument()
+  })
 })

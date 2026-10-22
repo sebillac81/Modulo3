@@ -21,6 +21,7 @@ public class RoastingManagerDbContext : DbContext
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<RoastBatch> RoastBatches => Set<RoastBatch>();
     public DbSet<RoastedCoffeeStock> RoastedCoffeeStock => Set<RoastedCoffeeStock>();
+    public DbSet<Sale> Sales => Set<Sale>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

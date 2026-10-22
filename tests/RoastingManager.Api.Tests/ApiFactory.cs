@@ -31,7 +31,7 @@ public class ApiFactory : WebApplicationFactory<Program>
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            TRUNCATE roast_batches, sale_presentation_supplies, sale_presentations,
+            TRUNCATE sales, roast_batches, sale_presentation_supplies, sale_presentations,
                      supplies, supply_suppliers, green_coffees, coffee_suppliers, customers
             RESTART IDENTITY CASCADE;
             UPDATE roasted_coffee_stock SET quantity_kg = 0, weighted_average_cost_per_kg = 0;

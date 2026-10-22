@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import './App.css'
 import { RoastBatchesPanel } from './features/batches/RoastBatchesPanel'
 import { CatalogsPage } from './features/catalogs/CatalogsPage'
+import { SalesPanel } from './features/sales/SalesPanel'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5079'
 
 const SECTIONS = [
   { key: 'catalogs', label: 'Catálogos', Component: CatalogsPage },
   { key: 'batches', label: 'Batches de tueste', Component: RoastBatchesPanel },
+  { key: 'sales', label: 'Ventas', Component: SalesPanel },
 ]
 
 function App() {
