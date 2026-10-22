@@ -10,7 +10,8 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<RoastingManagerDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("RoastingManager")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("RoastingManager"))
+           .UseSnakeCaseNamingConvention());
 
 builder.Services.AddCors(options =>
 {
@@ -37,3 +38,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Expuesta para que RoastingManager.Api.Tests pueda usar WebApplicationFactory<Program>.
+public partial class Program { }
