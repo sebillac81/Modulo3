@@ -57,22 +57,41 @@ public class SalesController : ControllerBase
         // café tostado se maneja en kg (ver Funcionalidad 2).
         var roastedCoffeeKgSold = request.UnitsSold * presentation.RoastedCoffeeGrams / 1000m;
 
-        var stock = await _dbContext.RoastedCoffeeStock.SingleAsync();
+        // AC-17: costos asociados, con los precios de insumos vigentes fijados.
+        var associatedCosts = Rounding.To2(
+            request.UnitsSold * presentation.Supplies.Sum(s => s.UnitPrice));
 
-        // AC-16: no permitir la venta si no hay stock suficiente de café tostado.
-        if (stock.QuantityKg < roastedCoffeeKgSold)
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+        // AC-16/RF-15: descuento atómico. El UPDATE solo afecta una fila si
+        // hay stock suficiente en ESE MOMENTO en la base (no el que leyó la
+        // app antes); así dos ventas concurrentes no pueden leer el mismo
+        // stock, pasar ambas la validación y que la segunda SaveChanges pise
+        // a la primera (lost update / sobreventa bajo concurrencia).
+        var rowsAffected = await _dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE roasted_coffee_stock
+            SET quantity_kg = quantity_kg - {roastedCoffeeKgSold}
+            WHERE id = 1 AND quantity_kg >= {roastedCoffeeKgSold}
+            """);
+
+        if (rowsAffected == 0)
         {
+            await transaction.RollbackAsync();
             ModelState.AddModelError(
                 nameof(request.UnitsSold), "No existe stock suficiente de café tostado.");
             return ValidationProblem(ModelState);
         }
 
-        // AC-17: costos asociados, con los precios de insumos vigentes fijados.
-        var associatedCosts = Rounding.To2(
-            request.UnitsSold * presentation.Supplies.Sum(s => s.UnitPrice));
+        // AC-18: margen de ganancia, con el costo promedio ponderado vigente
+        // fijado. Vender no modifica el costo promedio del pool, solo la
+        // cantidad; lo leemos ya dentro de la transacción (no antes del
+        // descuento), para no depender de un valor leído por la app.
+        var roastedCoffeeCostAtSaleTime = await _dbContext.RoastedCoffeeStock
+            .AsNoTracking()
+            .Where(s => s.Id == 1)
+            .Select(s => s.WeightedAverageCostPerKg)
+            .SingleAsync();
 
-        // AC-18: margen de ganancia, con el costo promedio ponderado vigente fijado.
-        var roastedCoffeeCostAtSaleTime = stock.WeightedAverageCostPerKg;
         var revenue = request.UnitSalePrice * request.UnitsSold;
         var cost = (roastedCoffeeCostAtSaleTime * roastedCoffeeKgSold) + associatedCosts;
         var profitMarginPercentage = Rounding.To2((revenue - cost) / revenue * 100m);
@@ -89,13 +108,10 @@ public class SalesController : ControllerBase
             AssociatedCosts = associatedCosts,
             ProfitMarginPercentage = profitMarginPercentage,
         };
-
-        // RF-15: descontar stock de café tostado (el costo promedio ponderado
-        // del pool no cambia al vender, solo la cantidad).
-        stock.QuantityKg -= roastedCoffeeKgSold;
-
         _dbContext.Sales.Add(sale);
         await _dbContext.SaveChangesAsync();
+
+        await transaction.CommitAsync();
 
         return CreatedAtAction(nameof(GetAll), ToResponse(sale, customer.Name, presentation.Name));
     }

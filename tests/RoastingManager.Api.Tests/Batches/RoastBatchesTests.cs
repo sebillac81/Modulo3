@@ -210,4 +210,108 @@ public class RoastBatchesTests : IClassFixture<ApiFactory>, IAsyncLifetime
 
         Assert.Equal(12.50m, persisted.CostPerKg);
     }
+
+    // --- Regresión: merma negativa (RoastedCoffeeObtainedKg > GreenCoffeeUsedKg) ---
+    // Reportado: un tueste de 1kg verde que "dio" 5kg tostado entraba con
+    // merma de -400%, y ese costo falso contaminaba el costo promedio
+    // ponderado del pool (y con él, el margen de las ventas siguientes).
+
+    [Fact]
+    public async Task RechazaBatch_CuandoElTostadoObtenidoSuperaAlVerdeUtilizado()
+    {
+        var greenCoffeeId = await CreateGreenCoffeeAsync(stockKg: 10m);
+
+        var response = await _client.PostAsJsonAsync(
+            "/api/roast-batches",
+            new CreateRoastBatchRequest(greenCoffeeId, 1m, 5m, new DateOnly(2026, 10, 20), null, null, null));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("no puede ser mayor a la cantidad de café verde utilizada", body);
+    }
+
+    [Fact]
+    public async Task RechazaBatchConMermaNegativa_SinTocarElStockNiElPool()
+    {
+        var greenCoffeeId = await CreateGreenCoffeeAsync(stockKg: 10m);
+
+        await _client.PostAsJsonAsync(
+            "/api/roast-batches",
+            new CreateRoastBatchRequest(greenCoffeeId, 1m, 5m, new DateOnly(2026, 10, 20), null, null, null));
+
+        var greenCoffees = await _client.GetFromJsonAsync<List<GreenCoffeeResponse>>("/api/green-coffees");
+        Assert.Equal(10m, greenCoffees!.Single(c => c.Id == greenCoffeeId).StockKg);
+
+        var stock = await _client.GetFromJsonAsync<RoastedCoffeeStockResponse>("/api/roasted-coffee-stock");
+        Assert.Equal(0m, stock!.QuantityKg);
+        Assert.Equal(0m, stock.WeightedAverageCostPerKg);
+    }
+
+    [Fact]
+    public async Task PermiteMermaCero_CuandoElTostadoObtenidoIgualaAlVerdeUtilizado()
+    {
+        var greenCoffeeId = await CreateGreenCoffeeAsync(stockKg: 10m);
+
+        var response = await _client.PostAsJsonAsync(
+            "/api/roast-batches",
+            new CreateRoastBatchRequest(greenCoffeeId, 5m, 5m, new DateOnly(2026, 10, 20), null, null, null));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<RoastBatchResponse>();
+        Assert.Equal(0m, body!.ShrinkagePercentage);
+    }
+
+    // --- Regresión: condición de carrera en el descuento de stock de café verde ---
+    // Reportado: con 10kg de Kenia, 5 tuestes concurrentes de 3kg entraron
+    // los 5 y el stock quedó en 7kg (debería haber entrado como máximo 3 y
+    // terminar en 1kg). El controller leía el stock, validaba en memoria y
+    // "SaveChanges" pisaba el valor: todos los requests concurrentes leían
+    // el mismo stock inicial y pasaban la validación antes de que ninguno
+    // hubiera escrito todavía (lost update).
+
+    [Fact]
+    public async Task BatchesConcurrentes_NoPermitenSobreventaDeStockDeCafeVerde()
+    {
+        var greenCoffeeId = await CreateGreenCoffeeAsync(stockKg: 10m);
+
+        var requests = Enumerable.Range(0, 5).Select(_ => _client.PostAsJsonAsync(
+            "/api/roast-batches",
+            new CreateRoastBatchRequest(greenCoffeeId, 3m, 2m, new DateOnly(2026, 10, 20), null, null, null)));
+
+        var responses = await Task.WhenAll(requests);
+
+        var successCount = responses.Count(r => r.StatusCode == HttpStatusCode.Created);
+        var rejectedCount = responses.Count(r => r.StatusCode == HttpStatusCode.BadRequest);
+
+        // Con 10kg de stock y lotes de 3kg, a lo sumo entran 3 (9kg); nunca los 5.
+        Assert.Equal(3, successCount);
+        Assert.Equal(2, rejectedCount);
+
+        var greenCoffees = await _client.GetFromJsonAsync<List<GreenCoffeeResponse>>("/api/green-coffees");
+        var updated = greenCoffees!.Single(c => c.Id == greenCoffeeId);
+
+        Assert.Equal(1m, updated.StockKg); // 10 - 3*3 = 1, nunca negativo ni "pisado" en 7
+        Assert.True(updated.StockKg >= 0);
+    }
+
+    [Fact]
+    public async Task BatchesConcurrentes_ActualizanCorrectamenteElPoolDeTostadoSinPerderIncrementos()
+    {
+        var greenCoffeeId = await CreateGreenCoffeeAsync(pricePerKg: 10m, stockKg: 30m);
+
+        // 3 batches idénticos (10kg -> 8kg a $12.50/kg): mismo costo en los
+        // tres, así el resultado final no depende del orden de ejecución.
+        var requests = Enumerable.Range(0, 3).Select(_ => _client.PostAsJsonAsync(
+            "/api/roast-batches",
+            new CreateRoastBatchRequest(greenCoffeeId, 10m, 8m, new DateOnly(2026, 10, 20), null, null, null)));
+
+        var responses = await Task.WhenAll(requests);
+
+        Assert.All(responses, r => Assert.Equal(HttpStatusCode.Created, r.StatusCode));
+
+        var stock = await _client.GetFromJsonAsync<RoastedCoffeeStockResponse>("/api/roasted-coffee-stock");
+
+        Assert.Equal(24m, stock!.QuantityKg); // 3 * 8kg, sin perder ningún incremento
+        Assert.Equal(12.50m, stock.WeightedAverageCostPerKg);
+    }
 }

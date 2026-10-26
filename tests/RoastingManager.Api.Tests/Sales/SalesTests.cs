@@ -197,4 +197,33 @@ public class SalesTests : IClassFixture<ApiFactory>, IAsyncLifetime
 
         Assert.Equal(74.38m, persisted.ProfitMarginPercentage);
     }
+
+    // --- Regresión: condición de carrera en el descuento de stock de café tostado ---
+    // Reportado: con 19.96kg en stock se intentaron vender 25kg (en varias
+    // ventas concurrentes) y el stock bajó solo 5kg en vez de rechazar lo
+    // que excedía el stock disponible. Mismo root cause que en batches:
+    // lectura + validación en memoria + "SaveChanges" pisando el valor.
+
+    [Fact]
+    public async Task VentasConcurrentes_NoPermitenSobreventaDeStockDeCafeTostado()
+    {
+        var (customerId, presentationId) = await SetUpScenarioAsync(); // deja 8kg en stock a $12.50/kg
+
+        // Cada venta de 4 unidades de 250g consume 1kg; con 8kg en stock
+        // entran como máximo 8 de las 10 solicitadas concurrentemente.
+        var requests = Enumerable.Range(0, 10).Select(_ => _client.PostAsJsonAsync(
+            "/api/sales",
+            new CreateSaleRequest(customerId, presentationId, 4, 20m, new DateOnly(2026, 10, 22))));
+
+        var responses = await Task.WhenAll(requests);
+
+        var successCount = responses.Count(r => r.StatusCode == HttpStatusCode.Created);
+        var rejectedCount = responses.Count(r => r.StatusCode == HttpStatusCode.BadRequest);
+
+        Assert.Equal(8, successCount);
+        Assert.Equal(2, rejectedCount);
+
+        var stock = await _client.GetFromJsonAsync<RoastedCoffeeStockResponse>("/api/roasted-coffee-stock");
+        Assert.Equal(0.00m, stock!.QuantityKg); // nunca negativo ni "pisado" en un valor mayor
+    }
 }

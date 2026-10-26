@@ -43,11 +43,15 @@ public class RoastBatchesController : ControllerBase
             return ValidationProblem(ModelState);
         }
 
-        // AC-10: no permitir el batch si no hay stock suficiente de café verde.
-        if (greenCoffee.StockKg < request.GreenCoffeeUsedKg)
+        // El tueste siempre pierde masa: el café tostado obtenido no puede
+        // superar al café verde utilizado (merma negativa es físicamente
+        // imposible y, si se permitiera, contaminaría el costo promedio
+        // ponderado del pool para todas las ventas posteriores).
+        if (request.RoastedCoffeeObtainedKg > request.GreenCoffeeUsedKg)
         {
             ModelState.AddModelError(
-                nameof(request.GreenCoffeeUsedKg), "No existe stock suficiente de café verde.");
+                nameof(request.RoastedCoffeeObtainedKg),
+                "La cantidad de café tostado obtenido no puede ser mayor a la cantidad de café verde utilizada.");
             return ValidationProblem(ModelState);
         }
 
@@ -58,6 +62,39 @@ public class RoastBatchesController : ControllerBase
         // AC-12: costo del café tostado, con el precio de compra vigente fijado.
         var costPerKg = Rounding.To2(
             greenCoffee.PurchasePricePerKg * request.GreenCoffeeUsedKg / request.RoastedCoffeeObtainedKg);
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+        // AC-10/RF-08: descuento atómico. El UPDATE solo afecta una fila si
+        // hay stock suficiente en ESE MOMENTO en la base (no el que leyó la
+        // app antes); así dos batches concurrentes no pueden leer el mismo
+        // stock, pasar ambos la validación y que el segundo SaveChanges
+        // pise al primero (lost update / sobreventa bajo concurrencia).
+        var rowsAffected = await _dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE green_coffees
+            SET stock_kg = stock_kg - {request.GreenCoffeeUsedKg}
+            WHERE id = {greenCoffee.Id} AND stock_kg >= {request.GreenCoffeeUsedKg}
+            """);
+
+        if (rowsAffected == 0)
+        {
+            await transaction.RollbackAsync();
+            ModelState.AddModelError(
+                nameof(request.GreenCoffeeUsedKg), "No existe stock suficiente de café verde.");
+            return ValidationProblem(ModelState);
+        }
+
+        // RF-09/RF-13: incremento y costo promedio ponderado en una sola
+        // expresión atómica, calculada sobre el valor ACTUAL de la fila
+        // (no uno leído antes por la app), bajo el lock que toma el UPDATE.
+        await _dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE roasted_coffee_stock
+            SET weighted_average_cost_per_kg = ROUND(
+                    ((quantity_kg * weighted_average_cost_per_kg) + ({request.RoastedCoffeeObtainedKg} * {costPerKg}))
+                    / (quantity_kg + {request.RoastedCoffeeObtainedKg}), 2),
+                quantity_kg = quantity_kg + {request.RoastedCoffeeObtainedKg}
+            WHERE id = 1
+            """);
 
         var batch = new RoastBatch
         {
@@ -72,21 +109,10 @@ public class RoastBatchesController : ControllerBase
             ShrinkagePercentage = shrinkagePercentage,
             CostPerKg = costPerKg,
         };
-
-        // RF-08: descontar stock de café verde.
-        greenCoffee.StockKg -= request.GreenCoffeeUsedKg;
-
-        // RF-09/RF-13: incrementar stock de café tostado y actualizar el
-        // costo promedio ponderado del pool.
-        var stock = await _dbContext.RoastedCoffeeStock.SingleAsync();
-        var newQuantityKg = stock.QuantityKg + request.RoastedCoffeeObtainedKg;
-        stock.WeightedAverageCostPerKg = Rounding.To2(
-            ((stock.QuantityKg * stock.WeightedAverageCostPerKg) + (request.RoastedCoffeeObtainedKg * costPerKg))
-            / newQuantityKg);
-        stock.QuantityKg = newQuantityKg;
-
         _dbContext.RoastBatches.Add(batch);
         await _dbContext.SaveChangesAsync();
+
+        await transaction.CommitAsync();
 
         return CreatedAtAction(nameof(GetAll), ToResponse(batch, greenCoffee.Name));
     }
