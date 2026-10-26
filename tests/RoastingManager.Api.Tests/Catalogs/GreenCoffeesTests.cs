@@ -59,4 +59,22 @@ public class GreenCoffeesTests : IClassFixture<ApiFactory>, IAsyncLifetime
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains("precio de compra debe ser mayor a cero", body);
     }
+
+    // Reportado: un nombre de 5000 caracteres daba 500 con stack trace en
+    // vez de 400 (supera el varchar(200) de la DB).
+    [Fact]
+    public async Task RechazaNombreDemasiadoLargo_Con400YSinStackTrace()
+    {
+        var supplierId = await CreateSupplierAsync();
+
+        var response = await _client.PostAsJsonAsync(
+            "/api/green-coffees",
+            new CreateGreenCoffeeRequest(new string('a', 5000), supplierId, 5.50m, 10m));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("no puede superar los 200 caracteres", body);
+        Assert.DoesNotContain("StackTrace", body);
+        Assert.DoesNotContain("Npgsql", body);
+    }
 }

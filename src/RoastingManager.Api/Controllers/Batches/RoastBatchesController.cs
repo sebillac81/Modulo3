@@ -101,7 +101,7 @@ public class RoastBatchesController : ControllerBase
             GreenCoffeeId = greenCoffee.Id,
             GreenCoffeeUsedKg = request.GreenCoffeeUsedKg,
             RoastedCoffeeObtainedKg = request.RoastedCoffeeObtainedKg,
-            RoastDate = request.RoastDate,
+            RoastDate = request.RoastDate!.Value,
             HumidityPercentage = request.HumidityPercentage,
             Density = request.Density,
             DevelopmentPercentage = request.DevelopmentPercentage,

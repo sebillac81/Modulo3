@@ -10,7 +10,9 @@ public record CreateSaleRequest(
     [Required(ErrorMessage = "La presentación es obligatoria.")] int PresentationId,
     [GreaterThanZero(ErrorMessage = "La cantidad y el precio deben ser mayores a cero.")] int UnitsSold,
     [GreaterThanZero(ErrorMessage = "La cantidad y el precio deben ser mayores a cero.")] decimal UnitSalePrice,
-    DateOnly SaleDate
+    [Required(ErrorMessage = "La fecha de la venta es obligatoria.")]
+    [NotInFuture(ErrorMessage = "La fecha de la venta no puede ser futura.")]
+    DateOnly? SaleDate
 );
 
 // RF-21/RF-23/RF-24: expone costos asociados y margen, fijados al momento

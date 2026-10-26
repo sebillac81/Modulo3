@@ -10,7 +10,9 @@ public record CreateRoastBatchRequest(
     [Required(ErrorMessage = "El café verde es obligatorio.")] int GreenCoffeeId,
     [GreaterThanZero(ErrorMessage = "Las cantidades deben ser mayores a cero.")] decimal GreenCoffeeUsedKg,
     [GreaterThanZero(ErrorMessage = "Las cantidades deben ser mayores a cero.")] decimal RoastedCoffeeObtainedKg,
-    DateOnly RoastDate,
+    [Required(ErrorMessage = "La fecha del tueste es obligatoria.")]
+    [NotInFuture(ErrorMessage = "La fecha del tueste no puede ser futura.")]
+    DateOnly? RoastDate,
     decimal? HumidityPercentage,
     decimal? Density,
     decimal? DevelopmentPercentage

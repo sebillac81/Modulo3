@@ -29,4 +29,20 @@ public class SupplySuppliersTests : IClassFixture<ApiFactory>, IAsyncLifetime
         var listResponse = await _client.GetFromJsonAsync<List<SupplySupplierResponse>>("/api/supply-suppliers");
         Assert.Contains(listResponse!, s => s.Name == "Bolsas SRL");
     }
+
+    [Fact]
+    public async Task RechazaProveedorDuplicado_ConDistintaCapitalizacion()
+    {
+        await _client.PostAsJsonAsync("/api/supply-suppliers", new CreateSupplySupplierRequest("Bolsas SRL"));
+
+        var response = await _client.PostAsJsonAsync(
+            "/api/supply-suppliers", new CreateSupplySupplierRequest("BOLSAS SRL"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("ya existe un proveedor de insumos con ese nombre", body, StringComparison.OrdinalIgnoreCase);
+
+        var listResponse = await _client.GetFromJsonAsync<List<SupplySupplierResponse>>("/api/supply-suppliers");
+        Assert.Single(listResponse!);
+    }
 }

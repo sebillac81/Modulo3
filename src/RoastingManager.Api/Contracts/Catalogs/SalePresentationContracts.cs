@@ -7,7 +7,9 @@ namespace RoastingManager.Api.Contracts.Catalogs;
 // café tostado en gramos debe ser mayor a cero. Los insumos asociados son
 // opcionales (cero o más).
 public record CreateSalePresentationRequest(
-    [Required(ErrorMessage = "El nombre es obligatorio.")] string Name,
+    [Required(ErrorMessage = "El nombre es obligatorio.")]
+    [StringLength(200, ErrorMessage = "El nombre no puede superar los 200 caracteres.")]
+    string Name,
     [GreaterThanZero(ErrorMessage = "La cantidad debe ser mayor a cero.")] decimal RoastedCoffeeGrams,
     List<int>? SupplyIds
 );

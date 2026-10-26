@@ -102,7 +102,7 @@ public class SalesController : ControllerBase
             PresentationId = presentation.Id,
             UnitsSold = request.UnitsSold,
             UnitSalePrice = request.UnitSalePrice,
-            SaleDate = request.SaleDate,
+            SaleDate = request.SaleDate!.Value,
             RoastedCoffeeKgSold = roastedCoffeeKgSold,
             RoastedCoffeeCostPerKgAtSaleTime = roastedCoffeeCostAtSaleTime,
             AssociatedCosts = associatedCosts,

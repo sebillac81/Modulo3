@@ -226,4 +226,48 @@ public class SalesTests : IClassFixture<ApiFactory>, IAsyncLifetime
         var stock = await _client.GetFromJsonAsync<RoastedCoffeeStockResponse>("/api/roasted-coffee-stock");
         Assert.Equal(0.00m, stock!.QuantityKg); // nunca negativo ni "pisado" en un valor mayor
     }
+
+    // --- Regresión: fechas vacías/futuras (ver también RoastBatchesTests) ---
+
+    [Fact]
+    public async Task RechazaVenta_ConFechaFaltante()
+    {
+        var (customerId, presentationId) = await SetUpScenarioAsync();
+
+        var response = await _client.PostAsJsonAsync(
+            "/api/sales", new CreateSaleRequest(customerId, presentationId, 4, 20m, null));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("fecha de la venta es obligatoria", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RechazaVenta_ConFechaFutura()
+    {
+        var (customerId, presentationId) = await SetUpScenarioAsync();
+
+        var response = await _client.PostAsJsonAsync(
+            "/api/sales", new CreateSaleRequest(customerId, presentationId, 4, 20m, new DateOnly(2099, 1, 1)));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("no puede ser futura", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // --- Regresión: margen muy negativo desbordaba numeric(6,2) y daba un
+    // 500 con stack trace en vez de guardar la venta. ---
+    [Fact]
+    public async Task RegistrarVenta_ConPrecioMuyBajo_NoRompeConUnErrorDeServidor()
+    {
+        var (customerId, presentationId) = await SetUpScenarioAsync();
+
+        var response = await _client.PostAsJsonAsync(
+            "/api/sales", new CreateSaleRequest(customerId, presentationId, 1, 0.01m, new DateOnly(2026, 10, 22)));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<SaleResponse>();
+        Assert.True(body!.ProfitMarginPercentage < -1000m); // margen muy negativo, pero calculado y guardado
+    }
 }

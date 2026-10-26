@@ -314,4 +314,36 @@ public class RoastBatchesTests : IClassFixture<ApiFactory>, IAsyncLifetime
         Assert.Equal(24m, stock!.QuantityKg); // 3 * 8kg, sin perder ningún incremento
         Assert.Equal(12.50m, stock.WeightedAverageCostPerKg);
     }
+
+    // --- Regresión: fechas vacías/futuras ---
+    // Reportado: una fecha vacía quedaba guardada como 0001-01-01 en vez de
+    // rechazarse, y el sistema aceptaba fechas como 2099.
+
+    [Fact]
+    public async Task RechazaBatch_ConFechaFaltante()
+    {
+        var greenCoffeeId = await CreateGreenCoffeeAsync();
+
+        var response = await _client.PostAsJsonAsync(
+            "/api/roast-batches",
+            new CreateRoastBatchRequest(greenCoffeeId, 10m, 8m, null, null, null, null));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("fecha del tueste es obligatoria", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RechazaBatch_ConFechaFutura()
+    {
+        var greenCoffeeId = await CreateGreenCoffeeAsync();
+
+        var response = await _client.PostAsJsonAsync(
+            "/api/roast-batches",
+            new CreateRoastBatchRequest(greenCoffeeId, 10m, 8m, new DateOnly(2099, 1, 1), null, null, null));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("no puede ser futura", body, StringComparison.OrdinalIgnoreCase);
+    }
 }
